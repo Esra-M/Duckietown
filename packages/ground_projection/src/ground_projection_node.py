@@ -339,5 +339,5 @@ class GroundProjectionNode(DTROS):
 
 
 if __name__ == "__main__":
-    ground_projection_node = GroundProjectionNode(node_name="ground_projection_node")
+    ground_projection_node = GroundProjectionNode(node_name="ground_projection")
     rospy.spin()

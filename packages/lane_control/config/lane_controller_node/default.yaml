@@ -1,14 +1,15 @@
 #lane_control/lane_controller_node
 v_bar: 0.19
-k_d: -6.0
-k_theta: -5
-k_Id: -0.3
-k_Iphi: 0.0
-#Broken up the 'theta_thres' for more finer tuning 
-theta_thres_max: 0.75  #0.523
-theta_thres_min: -0.5
+k_d: -6.0       # should be <= 0
+k_theta: -5.0   # should be <= 0
+k_Id: -0.3      # should be <= 0
+k_Dd: -0.3      # should be <= 0
+k_Iphi: -0.0    # should be <= 0
+k_Dphi: -0.0    # should be <= 0
+theta_thres: 0.523
 d_thres: 0.2615
 d_offset: 0.0
+deriv_type: "value"
 
 omega_ff: 0
 
