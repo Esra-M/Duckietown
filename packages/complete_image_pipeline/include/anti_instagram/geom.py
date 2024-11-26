@@ -11,10 +11,10 @@ import numpy as np
 # 3) find the contours within that filter and fill them in to form a mask for regions of interest
 
 # threshold values for the colorFilter, taken from line_detector and then tweaked
-hsv_white1 = np.array([0, 0, 150])
-hsv_white2 = np.array([180, 90, 255])
-hsv_yellow1 = np.array([20, 120, 150])
-hsv_yellow2 = np.array([45, 255, 255])
+hsv_white1 = np.array([0, 0, 100])
+hsv_white2 = np.array([180, 50, 255])
+hsv_yellow1 = np.array([10, 50, 50])  # Lower bounds for darker tones
+hsv_yellow2 = np.array([45, 200, 200])  # Reduced upper saturation and brightness
 hsv_red1 = np.array([0, 120, 100])
 hsv_red2 = np.array([12, 255, 255])
 hsv_red3 = np.array([165, 120, 100])
