@@ -3,20 +3,18 @@ import rospkg
 import rospy
 import yaml
 from duckietown_msgs.msg import (
+    AprilTagsWithInfos,
+    TagInfo,
+    BoolStamped,
     AprilTagDetection,
     AprilTagDetectionArray,
-    AprilTagsWithInfos,
-    BoolStamped,
-    TagInfo,
 )
-from duckietown_msgs.srv import ChangePattern, ChangePatternRequest
 import numpy as np
 import tf.transformations as tr
 from geometry_msgs.msg import PoseStamped, Pose
-from std_msgs.msg import Header, String
+from std_msgs.msg import Header
 
 
-# TODO: should this inherit DTROS?
 class AprilPostPros(object):
     """ """
 
@@ -25,18 +23,19 @@ class AprilPostPros(object):
         self.node_name = "apriltag_postprocessing_node"
 
         # Load parameters
-        self.camera_x = self.setup_param("~camera_x", 0.065)
-        self.camera_y = self.setup_param("~camera_y", 0.0)
-        self.camera_z = self.setup_param("~camera_z", 0.11)
-        self.camera_theta = self.setup_param("~camera_theta", 19.0)
-        self.scale_x = self.setup_param("~scale_x", 1)
-        self.scale_y = self.setup_param("~scale_y", 1)
-        self.scale_z = self.setup_param("~scale_z", 1)
+        self.camera_x = self.setupParam("~camera_x", 0.065)
+        self.camera_y = self.setupParam("~camera_y", 0.0)
+        self.camera_z = self.setupParam("~camera_z", 0.11)
+        self.camera_theta = self.setupParam("~camera_theta", 19.0)
+        self.scale_x = self.setupParam("~scale_x", 1)
+        self.scale_y = self.setupParam("~scale_y", 1)
+        self.scale_z = self.setupParam("~scale_z", 1)
 
         # -------- Start adding back the tag info stuff
-        tags_filepath = self.setup_param("~tags_file")
 
-        self.loc = self.setup_param("~loc", -1)  # -1 if no location is given
+        tags_filepath = self.setupParam("~tags_file")
+
+        self.loc = self.setupParam("~loc", -1)  # -1 if no location is given
         tags_file = open(tags_filepath, "r")
         self.tags_dict = yaml.safe_load(tags_file)
         tags_file.close()
@@ -65,77 +64,43 @@ class AprilPostPros(object):
             "t-light-ahead": self.info.T_LIGHT_AHEAD,
             "duck-crossing": self.info.DUCK_CROSSING,
             "parking": self.info.PARKING,
-            None: None,
         }
+
         # ---- end tag info stuff
 
         self.sub_prePros = rospy.Subscriber(
-            "apriltag_detector_node/detections", AprilTagDetectionArray, self.callback, queue_size=1
+            "~detections", AprilTagDetectionArray, self.callback, queue_size=1
         )
         self.pub_postPros = rospy.Publisher("~apriltags_out", AprilTagsWithInfos, queue_size=1)
-        # self.pub_visualize = rospy.Publisher("~tag_pose", PoseStamped, queue_size=1)
+        self.pub_visualize = rospy.Publisher("~tag_pose", PoseStamped, queue_size=1)
 
         # topics for state machine
-        self.pub_postPros_parking = rospy.Publisher(
-            "~apriltags_parking", BoolStamped, queue_size=1,
-        )
-        self.pub_postPros_intersection = rospy.Publisher(
-            "~apriltags_intersection", BoolStamped, queue_size=1,
-        )
+        self.pub_postPros_parking = rospy.Publisher("~apriltags_parking", BoolStamped, queue_size=1)
+        self.pub_postPros_intersection = rospy.Publisher("~apriltags_intersection", BoolStamped, queue_size=1)
 
-        # Service for changing LED colours
-        self._led_svc = rospy.ServiceProxy(
-            "led_emitter_node/set_pattern", ChangePattern,
-        )
+        rospy.loginfo("[%s] has started", self.node_name)
 
-    def setup_param(self, param_name, default_value=rospy.client._Unspecified):
+    def setupParam(self, param_name, default_value=rospy.client._Unspecified):
         value = rospy.get_param(param_name, default_value)
         rospy.set_param(param_name, value)
         return value
 
-    def _switch_led(self, id_info):
-        sign = self.traffic_sign_types[id_info["traffic_sign_type"]]
-        sign_types = self.traffic_sign_types
-        t_intersect_signs = set(
-            (
-                sign_types["right-T-intersect"],
-                sign_types["left-T-intersect"],
-                sign_types["T-intersection"],
-            )
-        )
-
-        if sign == sign_types["stop"]:
-            self._led_svc(String("RED"))
-        elif sign in t_intersect_signs:
-            self._led_svc(String("BLUE"))
-        elif sign == sign_types["4-way-intersect"]:
-            self._led_svc(String("GREEN"))
-        elif sign is sign_types[None]:  # None
-            self._led_svc(String("WHITE"))
-        else:
-            raise RuntimeError(f"unknown traffic sign {sign}")
-
     def callback(self, msg):
+
         tag_infos = []
 
         new_tag_data = AprilTagsWithInfos()
 
-        id_info = {
-            'tag_id': None,
-            'tag_type': None,
-            'street_name': None,
-            'vehicle_name': None,
-            'traffic_sign_type': None,
-        }
-
         # Load tag detections message
         for detection in msg.detections:
+
             # ------ start tag info processing
+
             new_info = TagInfo()
             # Can use id 1 as long as no bundles are used
             new_info.id = int(detection.tag_id)
             id_info = self.tags_dict[new_info.id]
-
+            # rospy.loginfo("[%s] report detected id=[%s] for april tag!",self.node_name,new_info.id)
             # Check yaml file to fill in ID-specific information
             new_info.tag_type = self.sign_types[id_info["tag_type"]]
             if new_info.tag_type == self.info.S_NAME:
@@ -171,8 +136,7 @@ class AprilPostPros(object):
                 new_info.vehicle_name = id_info["vehicle_name"]
 
             # TODO: Implement location more than just a float like it is now.
-            # location is now 0.0 if no location is set which is probably not
-            # that smart
+            # location is now 0.0 if no location is set which is probably not that smart
             if self.loc == 226:
                 l = id_info["location_226"]
                 if l is not None:
@@ -208,15 +172,6 @@ class AprilPostPros(object):
             camzout_R_tagzout = tr.quaternion_matrix((rot.x, rot.y, rot.z, rot.w))
             camzout_T_tagzout = tr.concatenate_matrices(camzout_t_tagzout, camzout_R_tagzout)
 
-            # What I think is going on:
-            # We take the apriltag and rotate it in the apriltag coordinate
-            # system (i.e. origin is at the apriltag).
-            # Then we rotate the apriltag based on the camera coordinate system
-            # (i.e. we apply the camera's rotation to the apriltag).
-            # Then we translate the apriltag into its position in the camera
-            # coordinate system
-            # Finally, we rotate and translate the apriltag based on the robot's
-            # coordinate system
             veh_T_tagxout = tr.concatenate_matrices(veh_T_camzout, camzout_T_tagzout, tagzout_T_tagxout)
 
             # Overwrite transformed value
@@ -225,17 +180,12 @@ class AprilPostPros(object):
 
             new_tag_data.detections.append(detection)
 
-        else:
-            # Update the LED colour
-            self._switch_led(id_info)
-
         new_tag_data.infos = tag_infos
-
         # Publish Message
         self.pub_postPros.publish(new_tag_data)
 
 
 if __name__ == "__main__":
-    rospy.init_node("apriltag_postprocessing_node", anonymous=False)
+    rospy.init_node("AprilPostPros", anonymous=False)
     node = AprilPostPros()
     rospy.spin()

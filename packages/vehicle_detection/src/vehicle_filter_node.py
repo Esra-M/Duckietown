@@ -78,7 +78,7 @@ class VehicleFilterNode(DTROS):
         self.pub_visualize = rospy.Publisher("~debug/visualization_marker", Marker, queue_size=1)
         self.pub_stopped_flag = rospy.Publisher("~stopped", BoolStamped, queue_size=1)
         self.pcm = PinholeCameraModel()
-        self.changePattern = rospy.ServiceProxy("~set_pattern", ChangePattern)
+        # self.changePattern = rospy.ServiceProxy("~set_pattern", ChangePattern)
         self.log("Initialization completed")
         self.last_led_state = None
 
@@ -196,12 +196,12 @@ class VehicleFilterNode(DTROS):
                 marker_msg.id = 0
                 marker_msg.action = Marker.DELETE
                 self.pub_visualize.publish(marker_msg)
-        try:
-            self.trigger_led_hazard_light(
-                detection, (distance_to_vehicle <= self.virtual_stop_line_offset.value)
-            )
-        except Exception:
-            self.trigger_led_hazard_light(detection, False)
+        # try:
+        #     self.trigger_led_hazard_light(
+        #         detection, (distance_to_vehicle <= self.virtual_stop_line_offset.value)
+        #     )
+        # except Exception:
+        #     self.trigger_led_hazard_light(detection, False)
 
     def calc_circle_pattern(self, height, width):
         """
@@ -226,33 +226,33 @@ class VehicleFilterNode(DTROS):
                         self.circlepattern_dist * j - self.circlepattern_dist * (height - 1) / 2
                     )
 
-    def trigger_led_hazard_light(self, detection, stopped):
-        """
-        Publish a service message to trigger the hazard light at the back of the robot
-        """
-        msg = String()
+    # def trigger_led_hazard_light(self, detection, stopped):
+    #     """
+    #     Publish a service message to trigger the hazard light at the back of the robot
+    #     """
+    #     msg = String()
 
-        if stopped:
-            msg.data = "OBSTACLE_STOPPED"
-            if msg.data != self.last_led_state:
-                self.changePattern(msg)
-            self.last_led_state = msg.data
-        elif detection:
-            msg.data = "OBSTACLE_ALERT"
-            if msg.data != self.last_led_state:
-                self.changePattern(msg)
-            self.last_led_state = msg.data
-        else:
-            if self.state == "LANE_FOLLOWING":
-                msg.data = "CAR_DRIVING"
-                if msg.data != self.last_led_state:
-                    self.changePattern(msg)
-                self.last_led_state = "CAR_DRIVING"
-            elif self.state == "NORMAL_JOYSTICK_CONTROL":
-                msg.data = "WHITE"
-                if msg.data != self.last_led_state:
-                    self.changePattern(msg)
-                self.last_led_state = msg.data
+    #     if stopped:
+    #         msg.data = "OBSTACLE_STOPPED"
+    #         if msg.data != self.last_led_state:
+    #             self.changePattern(msg)
+    #         self.last_led_state = msg.data
+    #     elif detection:
+    #         msg.data = "OBSTACLE_ALERT"
+    #         if msg.data != self.last_led_state:
+    #             self.changePattern(msg)
+    #         self.last_led_state = msg.data
+    #     else:
+    #         if self.state == "LANE_FOLLOWING":
+    #             msg.data = "CAR_DRIVING"
+    #             if msg.data != self.last_led_state:
+    #                 self.changePattern(msg)
+    #             self.last_led_state = "CAR_DRIVING"
+    #         elif self.state == "NORMAL_JOYSTICK_CONTROL":
+    #             msg.data = "WHITE"
+    #             if msg.data != self.last_led_state:
+    #                 self.changePattern(msg)
+    #             self.last_led_state = msg.data
 
     def publish_stop_line_msg(self, header, detected=False, at=False, x=0.0, y=0.0):
         """
