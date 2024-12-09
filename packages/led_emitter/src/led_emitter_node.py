@@ -151,7 +151,7 @@ class LEDEmitterNode(DTROS):
             self.log("Colors remapped to " + str(self._channel_order[self.robot_type]))
 
         # Turn on the LEDs
-        self.changePattern("WHITE")
+        self.changePattern("CAR_DRIVING")
 
         self.log("Initialized.")
 
@@ -165,6 +165,7 @@ class LEDEmitterNode(DTROS):
             req (SetCustomLEDPatternRequest): the requested pattern
 
         """
+        self.changePattern(str(req.pattern_name.data))
         # Update the protocol
         protocol = self._LED_protocol
         protocol["signals"]["custom"] = {

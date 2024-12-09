@@ -33,6 +33,12 @@ class AntiInstagramNode(DTROS):
         self._color_balance_percentage = rospy.get_param("~color_balance_scale")
         self._output_scale = rospy.get_param("~output_scale")
 
+        # Initialize objects and data
+        self.ai = AntiInstagram()
+        self.bridge = CvBridge()
+        self.image_msg = None
+        self.mutex = Lock()
+
         # Construct publisher
         self.pub = rospy.Publisher(
             "~thresholds", AntiInstagramThresholds, queue_size=1, dt_topic_type=TopicType.PERCEPTION
@@ -49,12 +55,6 @@ class AntiInstagramNode(DTROS):
 
         # Initialize Timer
         rospy.Timer(rospy.Duration(self._interval), self.calculate_new_parameters)
-
-        # Initialize objects and data
-        self.ai = AntiInstagram()
-        self.bridge = CvBridge()
-        self.image_msg = None
-        self.mutex = Lock()
 
         # ---
         self.log("Initialized.")
