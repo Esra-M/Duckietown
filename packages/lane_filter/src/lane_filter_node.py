@@ -5,7 +5,7 @@ import numpy as np
 
 import rospy
 from cv_bridge import CvBridge
-from duckietown.dtros import DTROS, NodeType, TopicType
+from duckietown.dtros import DTROS, NodeType, TopicType, DTParam, ParamType
 from duckietown_msgs.msg import FSMState, LanePose, SegmentList, Twist2DStamped
 from lane_filter import LaneFilterHistogram
 from sensor_msgs.msg import Image
@@ -15,17 +15,21 @@ from std_msgs.msg import String
 class LaneFilterNode(DTROS):
     """Generates an estimate of the lane pose.
 
-    Creates a `lane_filter` to get estimates on `d` and `phi`, the lateral and heading deviation from the
-    center of the lane.
-    It gets the segments extracted by the line_detector as input and output the lane pose estimate.
+    Creates a `lane_filter` to get estimates on `d` and `phi`, the lateral and
+    heading deviation from the center of the lane.
 
+    It gets the segments extracted by the line_detector as input and output the
+    lane pose estimate.
 
     Args:
-        node_name (:obj:`str`): a unique, descriptive name for the node that ROS will use
+        node_name (:obj:`str`): a unique, descriptive name for the node that ROS
+        will use
 
     Configuration:
-        ~filter (:obj:`list`): A list of parameters for the lane pose estimation filter
-        ~debug (:obj:`bool`): A parameter to enable/disable the publishing of debug topics and images
+        ~filter (:obj:`list`): A list of parameters for the lane pose estimation
+        filter
+        ~debug (:obj:`bool`): A parameter to enable/disable the publishing of
+        debug topics and images
 
     Subscribers:
         ~segment_list (:obj:`SegmentList`): The detected line segments from the line detector
@@ -53,6 +57,12 @@ class LaneFilterNode(DTROS):
 
         self._filter = rospy.get_param("~lane_filter_histogram_configuration", None)
         self._debug = rospy.get_param("~debug", False)
+
+        self.lane_offset = DTParam(
+            "~lane_offset",
+            param_type=ParamType.FLOAT,
+            default=0.0,
+        )
 
         # Create the filter
         self.filter = LaneFilterHistogram(**self._filter)
@@ -148,7 +158,7 @@ class LaneFilterNode(DTROS):
         self.t_last_update = current_time
 
         # Step 2: update
-        self.filter.update(segment_list_msg.segments)
+        self.filter.update(segment_list_msg.segments, self.lane_offset.value)
 
         # Step 3: build messages and publish things
         [d_max, phi_max] = self.filter.getEstimate()
@@ -192,7 +202,7 @@ class LaneFilterNode(DTROS):
                 self.latencyArray.pop(0)
 
             # print "Latency of segment list: ", segment_latency
-            # self.loginfo(f"Mean latency of Estimation:................. {np.mean(self.latencyArray)}")
+            self.loginfo(f"Mean latency of Estimation:................. {np.mean(self.latencyArray)}")
 
             # Get the segments that agree with the best estimate and publish them
             inlier_segments = self.filter.get_inlier_segments(segment_list_msg.segments, d_max, phi_max)

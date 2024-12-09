@@ -54,7 +54,6 @@ class LaneControllerNode(DTROS):
         super(LaneControllerNode, self).__init__(node_name=node_name, node_type=NodeType.PERCEPTION)
 
         # Add the node parameters to the parameters dictionary
-        # TODO: MAKE TO WORK WITH NEW DTROS PARAMETERS
         self.params = dict()
         self.params["~v_bar"] = DTParam("~v_bar", param_type=ParamType.FLOAT, min_value=0.0, max_value=5.0)
         self.params["~k_d"] = DTParam("~k_d", param_type=ParamType.FLOAT, min_value=-100.0, max_value=100.0)
@@ -62,15 +61,33 @@ class LaneControllerNode(DTROS):
             "~k_theta", param_type=ParamType.FLOAT, min_value=-100.0, max_value=100.0
         )
         self.params["~k_Id"] = DTParam("~k_Id", param_type=ParamType.FLOAT, min_value=-100.0, max_value=100.0)
+        self.params["~k_Dd"] = DTParam("~k_Dd", param_type=ParamType.FLOAT, min_value=-100.0, max_value=100.0)
         self.params["~k_Iphi"] = DTParam(
             "~k_Iphi", param_type=ParamType.FLOAT, min_value=-100.0, max_value=100.0
         )
-        #self.params["~theta_thres"] = rospy.get_param("~theta_thres", None)
-        #Breaking up the self.params["~theta_thres"] parameter for more finer tuning of phi
-        self.params["~theta_thres_min"] = DTParam("~theta_thres_min", param_type=ParamType.FLOAT, min_value=-100.0, max_value=100.0)  #SUGGESTION mandatorizing the use of DTParam inplace of rospy.get_param for parameters in the entire dt-core repository as it allows active tuning while Robot is in action.
-        self.params["~theta_thres_max"] = DTParam("~theta_thres_max", param_type=ParamType.FLOAT, min_value=-100.0, max_value=100.0) 
-        self.params["~d_thres"] = rospy.get_param("~d_thres", None)
-        self.params["~d_offset"] = rospy.get_param("~d_offset", None)
+        self.params["~k_Dphi"] = DTParam(
+            "~k_Dphi", param_type=ParamType.FLOAT, min_value=-100.0, max_value=100.0
+        )
+        self.params["~d_offset"] = DTParam(
+            "~d_offset",
+            param_type=ParamType.FLOAT,
+        )
+
+        self.params["~d_thres"] = DTParam(
+            "~d_thres",
+            param_type=ParamType.FLOAT,
+            min_value=0.0,
+            max_value=100.0,
+        )
+
+        self.params["~theta_thres"] = DTParam(
+            "~theta_thres",
+            param_type=ParamType.FLOAT,
+            min_value=0.0,
+            max_value=100.0,
+        )
+
+        self.params["~deriv_type"] = rospy.get_param("~deriv_type", "error")
         self.params["~integral_bounds"] = rospy.get_param("~integral_bounds", None)
         self.params["~d_resolution"] = rospy.get_param("~d_resolution", None)
         self.params["~phi_resolution"] = rospy.get_param("~phi_resolution", None)
@@ -211,22 +228,26 @@ class LaneControllerNode(DTROS):
         else:
 
             # Compute errors
-            d_err = pose_msg.d - self.params["~d_offset"]
+            d_err = pose_msg.d - self.params["~d_offset"].value
+            rospy.loginfo("")
+            rospy.loginfo(f"d_offset: {self.params['~d_offset'].value}")
+            rospy.loginfo(f"pose_msg.d: {pose_msg.d}")
+            rospy.loginfo(f"d_err: {d_err}")
+            rospy.loginfo(f"k_d: {self.params['~k_d']}")
+            rospy.loginfo("")
+
             phi_err = pose_msg.phi
 
             # We cap the error if it grows too large
-            if np.abs(d_err) > self.params["~d_thres"]:
+            if np.abs(d_err) > self.params["~d_thres"].value:
                 self.log("d_err too large, thresholding it!", "error")
-                d_err = np.sign(d_err) * self.params["~d_thres"]
-            
-            if phi_err > self.params["~theta_thres_max"].value or phi_err < self.params["~theta_thres_min"].value:
-                self.log("phi_err too large/small, thresholding it!", "error")
-                phi_err = np.maximum(self.params["~theta_thres_min"].value, np.minimum(phi_err, self.params["~theta_thres_max"].value))
+                d_err = np.sign(d_err) * self.params["~d_thres"].value
 
             wheels_cmd_exec = [self.wheels_cmd_executed.vel_left, self.wheels_cmd_executed.vel_right]
             if self.obstacle_stop_line_detected:
                 v, omega = self.controller.compute_control_action(
-                    d_err, phi_err, dt, wheels_cmd_exec, self.obstacle_stop_line_distance
+                    d_err, phi_err, dt, wheels_cmd_exec,
+                    self.obstacle_stop_line_distance, pose_msg
                 )
                 # TODO: This is a temporarily fix to avoid vehicle image detection latency caused unable to stop in time.
                 v = v * 0.25
@@ -234,7 +255,8 @@ class LaneControllerNode(DTROS):
 
             else:
                 v, omega = self.controller.compute_control_action(
-                    d_err, phi_err, dt, wheels_cmd_exec, self.stop_line_distance
+                    d_err, phi_err, dt, wheels_cmd_exec,
+                    self.stop_line_distance, pose_msg
                 )
 
             # For feedforward action (i.e. during intersection navigation)
@@ -253,7 +275,6 @@ class LaneControllerNode(DTROS):
 
     def cbParametersChanged(self):
         """Updates parameters in the controller object."""
-
         self.controller.update_parameters(self.params)
 
 

@@ -15,7 +15,9 @@ class LaneController:
         ~k_d (:obj:`float`): Proportional term for lateral deviation
         ~k_theta (:obj:`float`): Proportional term for heading deviation
         ~k_Id (:obj:`float`): integral term for lateral deviation
+        ~k_Dd (:obj:`float`): derivative term for lateral deviation
         ~k_Iphi (:obj:`float`): integral term for lateral deviation
+        ~k_Dphi (:obj:`float`): derivative term for lateral deviation
         ~d_thres (:obj:`float`): Maximum value for lateral error
         ~theta_thres (:obj:`float`): Maximum value for heading error
         ~d_offset (:obj:`float`): Goal offset from center of the lane
@@ -27,13 +29,15 @@ class LaneController:
         ~stop_line_slowdown (:obj:`dict`): Start and end distances for slowdown at stop lines
 
     """
-
     def __init__(self, parameters):
         self.parameters = parameters
+        self.d_D = 0.0
         self.d_I = 0.0
         self.phi_I = 0.0
+        self.phi_D = 0.0
         self.prev_d_err = 0.0
         self.prev_phi_err = 0.0
+        self._derivative_initialized = False
 
     def update_parameters(self, parameters):
         """Updates parameters of LaneController object.
@@ -43,7 +47,8 @@ class LaneController:
         """
         self.parameters = parameters
 
-    def compute_control_action(self, d_err, phi_err, dt, wheels_cmd_exec, stop_line_distance):
+    def compute_control_action(self, d_err, phi_err, dt, wheels_cmd_exec,
+                               stop_line_distance, current_lane_pose):
         """Main function, computes the control action given the current error signals.
 
         Given an estimate of the error, computes a control action (tuple of linear and angular velocity). This is done
@@ -56,6 +61,7 @@ class LaneController:
             wheels_cmd_exec (:obj:`bool`): confirmation that the wheel commands have been executed (to avoid
                                            integration while the robot does not move)
             stop_line_distance (:obj:`float`):  distance of the stop line, None if not detected.
+            current_lane_pose (:obj:`Pose`):  current pose
         Returns:
             v (:obj:`float`): requested linear velocity in meters/second
             omega (:obj:`float`): requested angular velocity in radians/second
@@ -63,6 +69,8 @@ class LaneController:
 
         if dt is not None:
             self.integrate_errors(d_err, phi_err, dt)
+            self.differentiate_errors(d_err, phi_err, dt,
+                                      current_lane_pose=current_lane_pose)
 
         self.d_I = self.adjust_integral(
             d_err, self.d_I, self.parameters["~integral_bounds"]["d"], self.parameters["~d_resolution"]
@@ -76,16 +84,27 @@ class LaneController:
 
         self.reset_if_needed(d_err, phi_err, wheels_cmd_exec)
 
-        # Scale the parameters linear such that their real value is at 0.22m/s
-        omega = (
-            self.parameters["~k_d"].value * d_err
-            + self.parameters["~k_theta"].value * phi_err
-            + self.parameters["~k_Id"].value * self.d_I
-            + self.parameters["~k_Iphi"].value * self.phi_I
-        )
+        if self._derivative_initialized:
+            omega = (
+                self.parameters["~k_d"].value * d_err
+                + self.parameters["~k_theta"].value * phi_err
+                + self.parameters["~k_Id"].value * self.d_I
+                + self.parameters["~k_Iphi"].value * self.phi_I
+                + self.parameters["~k_Dd"].value * self.d_D
+                + self.parameters["~k_Dphi"].value * self.phi_D
+            )
+        else:
+            omega = (
+                self.parameters["~k_d"].value * d_err
+                + self.parameters["~k_theta"].value * phi_err
+                + self.parameters["~k_Id"].value * self.d_I
+                + self.parameters["~k_Iphi"].value * self.phi_I
+            )
+            self._derivative_initialized = True
 
         self.prev_d_err = d_err
         self.prev_phi_err = phi_err
+        self.prev_lane_pose = current_lane_pose
 
         v = self.compute_velocity(stop_line_distance)
 
@@ -116,6 +135,34 @@ class LaneController:
             )
             return v
 
+    def differentiate_errors(self, d_err, phi_err, dt, current_lane_pose=None):
+        """
+        Differentiates error signals in lateral and heading direction.
+
+        Args:
+            d_err (:obj:`float`): error in meters in the lateral direction
+            phi_err (:obj:`float`): error in radians in the heading direction
+            dt (:obj:`float`): time delay in seconds
+            current_lane_pose (:obj:`duckietown_msgs.msg.LanePose`): the
+                current pose in the lane
+        """
+        if not self._derivative_initialized:
+            # First time step, no derivative to calculate
+            return
+
+        if self.parameters["~deriv_type"] == "value":
+            self.d_D = (current_lane_pose.d - self.prev_lane_pose.d) / dt
+            self.phi_D = (current_lane_pose.phi - self.prev_lane_pose.phi) / dt
+
+        elif self.parameters["~deriv_type"] == "error":
+            self.d_D = (d_err - self.prev_d_err) / dt
+            self.phi_D = (phi_err - self.prev_phi_err) / dt
+        else:
+            deriv_type = self.parameters["~deriv_type"]
+            raise NotImplementedError(
+                f"deriv_type {deriv_type} not implemented",
+            )
+
     def integrate_errors(self, d_err, phi_err, dt):
         """Integrates error signals in lateral and heading direction.
         Args:
@@ -127,10 +174,10 @@ class LaneController:
         self.phi_I += phi_err * dt
 
     def reset_if_needed(self, d_err, phi_err, wheels_cmd_exec):
-        """Resets the integral error if needed.
+        """Resets the integral and derivative error if needed.
 
-        Resets the integral errors in `d` and `phi` if either the error sign changes, or if the robot is completely
-        stopped (i.e. intersections).
+        Resets the integral errors in `d` and `phi` if either the error sign
+        changes, or if the robot is completely stopped (i.e. intersections).
 
         Args:
             d_err (:obj:`float`): error in meters in the lateral direction
@@ -145,6 +192,7 @@ class LaneController:
         if wheels_cmd_exec[0] == 0 and wheels_cmd_exec[1] == 0:
             self.d_I = 0
             self.phi_I = 0
+            self._derivative_initialized = False
 
     @staticmethod
     def adjust_integral(error, integral, bounds, resolution):

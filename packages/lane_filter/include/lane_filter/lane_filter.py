@@ -1,5 +1,4 @@
 from math import floor, sqrt
-from math import floor, sqrt
 
 import numpy as np
 import duckietown_code_utils as dtu
@@ -14,7 +13,6 @@ __all__ = ["LaneFilterHistogram"]
 
 class LaneFilterHistogram(LaneFilterInterface):
     """Generates an estimate of the lane pose.
-
 
     Creates and maintain a histogram grid filter to estimate the lane pose.
     Lane pose is defined as the tuple (`d`, `phi`) : lateral deviation and angulare deviation from the
@@ -185,7 +183,8 @@ class LaneFilterHistogram(LaneFilterInterface):
 
         return segmentsArray
 
-    def update(self, segments):
+    def update(self, segments, lane_offset):
+        self.centre_lane_offset = lane_offset
         # prepare the segments for each belief array
         segmentsArray = self.prepareSegments(segments)
         # generate all belief arrays
@@ -276,6 +275,7 @@ class LaneFilterHistogram(LaneFilterInterface):
 
         # weight = distance
         weight = 1
+        d_i += self.centre_lane_offset
         return d_i, phi_i, l_i, weight
 
     def get_inlier_segments(self, segments, d_max, phi_max):
