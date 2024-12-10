@@ -1,7 +1,7 @@
 #lane_control/lane_controller_node
 v_bar: 0.10
 k_d: -6.0       # should be <= 0
-k_theta: -2.2   # should be <= 0
+k_theta: -1.8   # should be <= 0
 k_Id: -0.3      # should be <= 0
 k_Dd: -0.3      # should be <= 0
 k_Iphi: -0.0    # should be <= 0

@@ -158,8 +158,18 @@ class LaneControllerNode(DTROS):
         self.possible_turns = [0, 1, 2]  # left, straight, right
         self.tags_to_turns = {
                 67: [0, 2],
+                65: [0, 2],
+                11: [0, 2],
                 63: [0, 1],
+                10: [0, 1],
+                61: [0, 1],
                 59: [1, 2],
+                9: [1, 2],
+                57: [1, 2],
+                13: [0, 1, 2],
+                14: [0, 1, 2],
+                15: [0, 1, 2],
+                19: [0, 1, 2],
                 
         }
 
@@ -190,33 +200,33 @@ class LaneControllerNode(DTROS):
         )
 
         self.l_turn_v = DTParam(
-            "~l_turn_v", default = 0.3,
+            "~l_turn_v", default = 0.1,
         )
         self.l_turn_omega = DTParam(
             "~l_turn_omega", default = 1.3,
         )
         self.l_turn_secs = DTParam(
-            "~l_turn_secs", default = 1.75,
+            "~l_turn_secs", default = 3,
         )
 
         self.r_turn_v = DTParam(
-            "~r_turn_v", default = 0.3,
+            "~r_turn_v", default = 0.1,
         )
         self.r_turn_omega = DTParam(
-            "~r_turn_omega", default = -5.0,
+            "~r_turn_omega", default = -4.0,
         )
         self.r_turn_secs = DTParam(
-            "~r_turn_secs", default = 0.6,
+            "~r_turn_secs", default = 3,
         )
 
         self.s_turn_v = DTParam(
-            "~s_turn_v", default = 0.3,
+            "~s_turn_v", default = 0.1,
         )
         self.s_turn_omega = DTParam(
             "~s_turn_omega", default = 0.0
         )
         self.s_turn_secs = DTParam(
-            "~s_turn_secs", default = 2.5,
+            "~s_turn_secs", default = 4,
         )
 
         self.turn_params = [
