@@ -185,7 +185,7 @@ class LaneControllerNode(DTROS):
         self.params["~use_LEDs"] = DTParam(
             "~use_LEDs",
             param_type=ParamType.BOOL,
-            default=False,
+            default=True,
         )
 
         self.l_turn_v = DTParam(
