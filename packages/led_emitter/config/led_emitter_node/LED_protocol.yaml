@@ -41,19 +41,19 @@ LED_protocol:
 
     CAR_SIGNAL_RIGHT:
       color_mask: []
-      color_list: ["white","white","yellow","yellow","red"]
-      frequency_mask: [0,0,1,1,0]
+      color_list: ["white","yellow","white","red","yellow"]
+      frequency_mask: [0,1,0,0,1]
       frequency: *f1
 
     CAR_SIGNAL_LEFT:
       color_mask: []
-      color_list: ["yellow","white","white","red","yellow"]
-      frequency_mask: [1,0,0,0,1]
+      color_list: ["yellow","red","white","yellow","white"]
+      frequency_mask: [1,0,0,1,0]
       frequency: *f1
 
     CAR_SIGNAL_STRAIGHT:
       color_mask: []
-      color_list: ["green","green","green","green","green"]
+      color_list: ["white","red","white","red","white"]
       frequency_mask: [0,0,0,0,0]
       frequency: *f1
 

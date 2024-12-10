@@ -157,9 +157,10 @@ class LaneControllerNode(DTROS):
         # Intersection control
         self.possible_turns = [0, 1, 2]  # left, straight, right
         self.tags_to_turns = {
+                67: [0, 2],
                 63: [0, 1],
                 59: [1, 2],
-                67: [0, 2],
+                
         }
 
         self.current_tag_id = None
@@ -414,6 +415,10 @@ class LaneControllerNode(DTROS):
 
                 self.at_stop_line = False
 
+                # Choose the turn
+                turn = int(self.selectTurn())
+                rospy.loginfo(f"    Selecting turn: {turn}")
+
                 # Set the LED signal lights
                 if self.params["~use_LEDs"].value:
                     leds = self._led_signals[turn]
@@ -429,9 +434,7 @@ class LaneControllerNode(DTROS):
                 rospy.loginfo(f"    Sleeping for {sleep_sec} seconds")
                 rospy.sleep(sleep_sec)  # wait at stop line
 
-                # Choose the turn
-                turn = int(self.selectTurn())
-                rospy.loginfo(f"    Selecting turn: {turn}")
+
 
                 # Construct turning command
                 v, omega, sleep_time = self.turn_params[turn]
