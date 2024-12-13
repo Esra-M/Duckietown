@@ -206,14 +206,14 @@ class LaneControllerNode(DTROS):
             "~l_turn_omega", default = 1.3,
         )
         self.l_turn_secs = DTParam(
-            "~l_turn_secs", default = 3,
+            "~l_turn_secs", default = 4,
         )
 
         self.r_turn_v = DTParam(
             "~r_turn_v", default = 0.1,
         )
         self.r_turn_omega = DTParam(
-            "~r_turn_omega", default = -4.0,
+            "~r_turn_omega", default = -1.75,
         )
         self.r_turn_secs = DTParam(
             "~r_turn_secs", default = 3,
@@ -223,10 +223,10 @@ class LaneControllerNode(DTROS):
             "~s_turn_v", default = 0.1,
         )
         self.s_turn_omega = DTParam(
-            "~s_turn_omega", default = 0.0
+            "~s_turn_omega", default = 0.0,
         )
         self.s_turn_secs = DTParam(
-            "~s_turn_secs", default = 4,
+            "~s_turn_secs", default = 3.0,
         )
 
         self.turn_params = [
@@ -306,7 +306,7 @@ class LaneControllerNode(DTROS):
         """
         # Only stop at stop lines at minimum s second intervals
         # TODO: get s from a ROS param
-        s = 7
+        s = 10
         if msg.at_stop_line:
             if self.prev_at_stop_line_time is not None:
                 valid_at_stop_line = (
