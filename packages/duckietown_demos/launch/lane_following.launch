@@ -3,6 +3,7 @@
 	<arg name="veh" default="$(env VEHICLE_NAME)"/>
     <arg name="demo_name" value="lane_following"/>
 	<!-- start basic args -->
+
 	<include file="$(find duckietown_demos)/launch/master.launch">
 	    <!-- Basic arguments -->
 		<arg name="veh" value="$(arg veh)"/>
@@ -10,9 +11,6 @@
 		<arg name="param_file_name" value="default" />
 		<arg name="visualization" value="true" />
 
-        <!-- Finite state machine -->
-        <!-- <arg name="fsm" value="true"/> -->
-        <!-- <arg name="/fsm/logic_gate" value="true"/> -->
 
 		<!-- Basic functionalities -->
 		<arg name="line_detector_param_file_name" default="default" />
@@ -21,7 +19,6 @@
 		<arg name="/camera/rect" value="true"/>
 		<arg name="LED" value="true"/>
         <arg name="/LED/emitter" value="true"/>
-		<arg name="/LED/detector" value="true"/>
 		<arg name="/LED/pattern_switch" value="true"/>
 
 	    <!-- Lane Following stack -->
@@ -32,7 +29,9 @@
 	    <arg name="/lane_following/lane_controller" value="true"/>
 	    <arg name="/lane_following/stop_line_filter" value="true"/>
 		<arg name="apriltags" value="true" />
+		<arg name="object_detection" value="true"/>
 
   	</include>
+	
 
 </launch>

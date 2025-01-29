@@ -12,12 +12,12 @@
 	<arg name="camera_topic" default="camera_node"/>
 	<arg name="param_file_name" default="default" />
 	<arg name="apriltags_param_file_name" default="$(arg param_file_name)" />
-	<arg name="fsm_file_name" default="$(arg demo_name)" />
 	<arg name="verbose" default="false" />
 	<arg name="ai_trafo_mode" default="cb" doc="'cb' for colo balance only; 'both' for color balance and linear trafo"/>
 	<arg name="ai_interval" default="5" doc="interval with which the linear trafo gets updated. color balance is performed every second."/>
 	<arg name="line_detector_param_file_name" default="$(arg param_file_name)"/>
 	<arg name="intersectionType" default= "stopSign"/>
+
 	<!-- end args -->
 
     <!-- start switch args -->
@@ -39,19 +39,29 @@
 	<arg name="/vehicle_avoidance/detection" value="true" />
 	<arg name="/vehicle_avoidance/filter" value="true" />
 
-	<arg name="fsm" default="false"/>
-	<arg name="/fsm/logic_gate" default="false"/>
-
     <arg name="LED" default="false" />
 	<arg name="/LED/pattern_switch" default="false" />
-	<arg name="/LED/detector" default="false" />
 	<arg name="/LED/joystick" default="false" />
 	<arg name="/LED/interpreter" default="false" />
     <arg name="/LED/emitter" default="false" />
 
 	<arg name="apriltags" default="false"/>
 
+    <arg name="object_detection" default="false"/>
+    <arg name="object_detection/AIDO_eval" default="false"/>
+
+
     <!-- end switch args -->
+
+    <!-- Start Object Detection -->
+    <group if="$(arg object_detection)">
+        <remap from="object_detection_node/image/compressed" to="camera_node/image/compressed"/>
+        <include file="$(find object_detection)/launch/object_detection_node.launch">
+            <arg name="veh" value="$(arg veh)"/>
+            <arg name="AIDO_eval" value="$(arg object_detection/AIDO_eval)"/>
+        </include>
+    </group>
+    <!-- End object detection -->
 
    <!-- Image Decoding -->
     <group if="$(arg /camera/raw)">
@@ -143,11 +153,6 @@
                 <arg name="param_file_name" value="$(arg param_file_name)"/>
             </include>
 
-		<!--     <remap from="intersection_controller_node/turn_id" to="lane_controller_node/turn_id" /> -->
-		<!--     <include file="$(find intersection_control)/launch/intersection_controller_node.launch"> -->
-		<!--         <arg name="veh" value="$(arg veh)"/> -->
-		<!--         <arg name="param_file_name" value="$(arg param_file_name)"/> -->
-		<!--     </include> -->
 		</group>
 
         <!-- Visualization -->
@@ -180,15 +185,7 @@
 
     <!-- Start LEDs Detection -->
     <group if="$(arg LED)">
-        <!-- Detection -->
-        <group if="$(arg /LED/detector)">
-            <remap from="led_detector_node/image/compressed" to="camera_node/image/compressed"/>
-            <include file="$(find led_detection)/launch/led_detection.launch">
-                <arg name="veh" value="$(arg veh)"/>
-                <arg name="param_file_name" value="$(arg param_file_name)"/>
-                <arg name="verbose" value = "1"/>
-            </include>
-        </group>
+
 
         <!--remap from="led_joy_mapper_node/change_color_pattern" to="led_emitter_node/change_color_pattern" /-->
         <group if="$(arg /LED/joystick)">
@@ -241,6 +238,7 @@
 		</include>
 	</group>
 
+
     <!-- Start anti-instagram / LF, IN -->
     <group if="$(arg anti_instagram)">
         <remap from="anti_instagram_node/uncorrected_image/compressed" to="camera_node/image/compressed"/>
@@ -251,4 +249,6 @@
         </include>
     </group>
     <!-- End anti-instagram -->
+
+
 </launch>
