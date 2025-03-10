@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+client#!/usr/bin/env python3
 import cv2
 import numpy as np
 import os
@@ -53,24 +53,33 @@ class ObjectDetectionNode(DTROS):
 
         rgb = bgr[..., ::-1]
         rgb = cv2.resize(rgb, (IMAGE_SIZE, IMAGE_SIZE))
+
         bboxes, classes, scores = self.model_wrapper.predict(rgb)
 
-        # Separate stop logic for ducks and duckiebots
+        # Stop logic for ducks and duckiebots
         stop_signal = False
         large_duck = False
         large_duckiebot = False
 
+        # Define the left and right boundaries of the center region
+        left_boundary = int(IMAGE_SIZE * 0.33)
+        right_boundary = int(IMAGE_SIZE * 0.75)
+
         for cls, bbox, score in zip(classes, bboxes, scores):
-            if cls == 0 and score > 0.5:  # Duck
+
+            # Calculate center of bounding box
+            center_x = (bbox[0] + bbox[2]) / 2
+
+            if cls == 0 and score > 0.7:  # Duck
                 area = (bbox[2] - bbox[0]) * (bbox[3] - bbox[1])
-                if area > 2000:
+                if area > 2000 and left_boundary < center_x < right_boundary:
                     stop_signal = True
                     large_duck = True
                     self.log(f"Duck detected. Area: {area}")
 
-            if cls == 1 and score > 0.5:  # Duckiebot
+            if cls == 1 and score > 0.7:  # Duckiebot
                 area = (bbox[2] - bbox[0]) * (bbox[3] - bbox[1])
-                if area > 10000:
+                if area > 10000 and left_boundary < center_x < right_boundary:
                     stop_signal = True
                     large_duckiebot = True
                     self.log(f"Duckiebot detected. Area: {area}")
@@ -94,6 +103,8 @@ class ObjectDetectionNode(DTROS):
             self.log("Driving...")
         
         self.pub_vel.publish(vel_cmd)
+
+
         self.visualize_detections(rgb, bboxes, classes)
 
     def visualize_detections(self, rgb, bboxes, classes):
