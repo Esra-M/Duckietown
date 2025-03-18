@@ -9,7 +9,7 @@ The project is organized into several main directories:
 - ***assets***: Contains various resources and configurations used by the project
 - ***launchers***: Includes scripts for launching different components of the project
 - ***packages***: Contains the core functionalities of the project, divided into several packages
-- ***video_demos***: Contains demo videos of the different functionalities 
+- ***video_demos***: Contains the individual demo videos of the different functionalities 
 
 ### Packages
 - ***anti_instagram***: Handles color correction
@@ -41,4 +41,6 @@ dts devel run -H <ROBOT_NAME>
 For a detailed report on the project, including the implementation of key functionalities such as lane following, intersection navigation, and object detection, please refer to the `Final_Report.pdf` file in the repository.
 
 For a presentation overview of the project, refer to the `Final_Presentation.pptx` file in the repository.
+
+You can access the demo video of the project [here](https://youtu.be/0AisAz7qiFU).
 
